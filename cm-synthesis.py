@@ -1,17 +1,24 @@
 from __future__ import annotations
 
+from math import sqrt
 from typing import List
+from typing import Tuple
 
 import numpy as np
-from numpy.polynomial import polynomial
-
+from numpy.polynomial.polynomial import polyadd
+from numpy.polynomial.polynomial import polyfromroots
+from numpy.polynomial.polynomial import polymul
+from numpy.polynomial.polynomial import polypow
+from numpy.polynomial.polynomial import polyroots
+from numpy.polynomial.polynomial import polysub
+from numpy.polynomial.polynomial import polyval
 """
 =========================
 C: characteristic function
 C(w) = F(w) / P(w)
 =========================
 S11: reflection function
-S11(w) = F(w) / E(w)
+S11(w) = F(w) / E(w)e_r
 =========================
 S21: transfer function
 S21(w) = P(w) / E(w)e
@@ -21,7 +28,8 @@ S21(w) = P(w) / E(w)e
 order = 4
 f0 = 3700
 bw = 80
-ftzs_w = [1.80, 1.32]
+rl = 22
+ftzs_w = [1.3217, 1.8082]
 
 
 def _populate_tzs_w(order: int,
@@ -44,10 +52,21 @@ def _calc_fbw(f0: int | float, bw: int | float) -> float:
         return 0
 
 
-def _calc_polys_w(order: int, tzs: List[float]):
+def _calc_eps(order: int, f_s, p_s, rl: float) -> Tuple[float, float]:
+
+    if len(ftzs_w) < order:
+        e_r = 1
+        e = (1/sqrt(10**(rl/10)-1)) * abs(polyval(1j, p_s) * e_r /
+                                          polyval(1j, f_s))
+    else:
+        pass
+    return e, e_r
+
+
+def _calc_FsPs(order: int, tzs: List[float]):
     temp = [1]
     for tz in tzs:
-        temp = polynomial.polymul(temp, [1, -1/tz])
+        temp = polymul(temp, [1, -1/tz])
     p_w = temp
 
     init_0 = [1]
@@ -60,27 +79,37 @@ def _calc_polys_w(order: int, tzs: List[float]):
     f1 = init_1
     for j in range(2, order + 1):
         A = ((1-1/(tzs[j-1]**2)) / (1-1/(tzs[j-2]**2)))**0.5
-        fnext_1 = polynomial.polymul(f1, [-1/tzs[j-1], 1])
-        fnext_2 = polynomial.polymul(f1, [-1/tzs[j-2], 1])
-        fnext_3 = polynomial.polymul(f0,
-                                     polynomial.polypow([1, -1/tzs[j-2]], 2))
-        temp = polynomial.polyadd(fnext_1, A*fnext_2)
-        fnext = polynomial.polysub(temp, A*fnext_3)
+        fnext_1 = polymul(f1, [-1/tzs[j-1], 1])
+        fnext_2 = polymul(f1, [-1/tzs[j-2], 1])
+        fnext_3 = polymul(f0, polypow([1, -1/tzs[j-2]], 2))
+        temp = polyadd(fnext_1, A*fnext_2)
+        fnext = polysub(temp, A*fnext_3)
         f0 = f1
         f1 = fnext
     f_w = f1
     return _make_monic(f_w, p_w)
 
 
-def _make_monic(f, p):
-    return (polynomial.polyfromroots(polynomial.polyroots(f)),
-            polynomial.polyfromroots(polynomial.polyroots(p)))
+def _make_monic(f_w, p_w):
+    # multiplying by 1j maps roots from real frequncy to complex plane
+    # for more details please check Cameron's book p.182
+
+    f_s = polyfromroots(polyroots(f_w)*1j)
+    if (order - len(ftzs_w)) % 2:
+        p_s = polyfromroots(polyroots(p_w)*1j)
+    else:
+        p_s = polyfromroots(polyroots(p_w)*1j)*1j
+    return f_s, p_s
 
 
 def main():
-    print(f'Fractional bandwidth-->{_calc_fbw(f0, bw)}')
+    print(f'Order --> {order}')
+    print(f'Fractional bandwidth --> {_calc_fbw(f0, bw)}')
     tzs_w = _populate_tzs_w(order, ftzs_w)
-    print(f'TZs in real frequency-->{tzs_w}')
-    f_w, p_w = _calc_polys_w(order, tzs_w)
-    print(f'Monic F(w)-->{f_w}')
-    print(f'Monic P(w)-->{p_w}')
+    print(f'TZs in real frequency --> {tzs_w}')
+    f_s, p_s = _calc_FsPs(order, tzs_w)
+    print(f'Monic F(s) --> {f_s}')
+    print(f'Monic P(s) --> {p_s}')
+    e, e_r = _calc_eps(order, f_s, p_s, rl)
+    print(f'e --> {e}')
+    print(f'e_r --> {e_r}')
