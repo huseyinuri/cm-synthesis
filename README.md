@@ -8,4 +8,3 @@ design by coupling matrix approach.
 ```bash
 pip install cm-synthesis
 ```
-
