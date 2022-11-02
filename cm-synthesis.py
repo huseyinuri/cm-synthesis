@@ -5,8 +5,21 @@ from typing import List
 import numpy as np
 from numpy.polynomial import polynomial
 
-N = 3
-tzs = [3.37, np.Inf, np.Inf]
+"""
+=========================
+F: characteristic function
+F(w) = P(w) / D(w)
+=========================
+S11: reflection function
+S11(w) = P(w) / E(w)
+=========================
+S21: transfer function
+S21(w) = D(w) / E(w)e
+=========================
+"""
+
+N = 4
+tzs = [1.3217, 1.8082, np.Inf, np.Inf]
 
 
 def _populate_tzs(order: int,
@@ -64,8 +77,14 @@ def _calc_num(order: int, tzs: List[float]):
     return p1
 
 
+def _make_monic(Pn, Dn):
+    return (polynomial.polyfromroots(polynomial.polyroots(Pn)),
+            polynomial.polyfromroots(polynomial.polyroots(Dn)))
+
+
 def main():
     Pn = _calc_num(N, tzs)
     Dn = _calc_denum(tzs)
     print(Pn)
     print(Dn)
+    print(_make_monic(Pn, Dn))
