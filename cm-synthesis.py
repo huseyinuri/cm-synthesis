@@ -4,6 +4,7 @@ from math import sqrt
 from typing import List
 from typing import Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial.polynomial import polyadd
 from numpy.polynomial.polynomial import polyfromroots
@@ -29,7 +30,8 @@ order = 4
 f0 = 3700
 bw = 80
 rl = 22
-ftzs_w = [1.3217, 1.8082]
+omega = np.arange(-4, 4, 0.0001)
+ftzs_w = np.array([1.3217, 1.8082])
 
 
 def _populate_tzs_w(order: int,
@@ -63,6 +65,16 @@ def _calc_eps(order: int, f_s, p_s, rl: float) -> Tuple[float, float]:
     return e, e_r
 
 
+def _calc_Es(e, e_r, f_s, p_s):
+    # Alternating singularity method is impelemented
+    # for details please check Cameron's book p.188
+    e_e_conj = polyadd(e_r * p_s, e * f_s)
+    alt_roots = polyroots(e_e_conj)
+    alt_roots.real *= np.where(alt_roots.real > 0, -1, 1)
+    e_s = polyfromroots(alt_roots)
+    return e_s
+
+
 def _calc_FsPs(order: int, tzs: List[float]):
     temp = [1]
     for tz in tzs:
@@ -93,7 +105,6 @@ def _calc_FsPs(order: int, tzs: List[float]):
 def _make_monic(f_w, p_w):
     # multiplying by 1j maps roots from real frequncy to complex plane
     # for more details please check Cameron's book p.182
-
     f_s = polyfromroots(polyroots(f_w)*1j)
     if (order - len(ftzs_w)) % 2:
         p_s = polyfromroots(polyroots(p_w)*1j)
@@ -102,14 +113,37 @@ def _make_monic(f_w, p_w):
     return f_s, p_s
 
 
+def plot_S11_S21(f_s, p_s, e_s, e, e_r):
+    s11 = 20 * np.log10(abs(polyval(omega*1j, f_s) /
+                        (polyval(omega*1j, e_s) * e_r)))
+    s21 = 20 * np.log10(abs(polyval(omega*1j, p_s) /
+                        (polyval(omega*1j, e_s) * e)))
+
+    _, ax = plt.subplots()
+    ax.plot(omega, s11)
+    ax.plot(omega, s21)
+    plt.show()
+
+
 def main():
-    print(f'Order --> {order}')
-    print(f'Fractional bandwidth --> {_calc_fbw(f0, bw)}')
+    fbw = _calc_fbw(f0, bw)
     tzs_w = _populate_tzs_w(order, ftzs_w)
-    print(f'TZs in real frequency --> {tzs_w}')
     f_s, p_s = _calc_FsPs(order, tzs_w)
+    e, e_r = _calc_eps(order, f_s, p_s, rl)
+    e_s = _calc_Es(e, e_r, f_s, p_s)
+
+    print(f'Order --> {order}')
+    print(f'Fractional bandwidth --> {fbw}')
+    print(f'TZs in real frequency --> {tzs_w}')
     print(f'Monic F(s) --> {f_s}')
     print(f'Monic P(s) --> {p_s}')
-    e, e_r = _calc_eps(order, f_s, p_s, rl)
+    print(f'Monic E(s) --> {e_s}')
     print(f'e --> {e}')
     print(f'e_r --> {e_r}')
+
+    plot_S11_S21(f_s, p_s, e_s, e, e_r)
+    print('hello')
+
+
+if __name__ == '__main__':
+    main()
