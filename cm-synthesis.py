@@ -27,7 +27,6 @@ S21: transfer function
 S21(w) = P(w) / E(w)e
 =========================
 """
-
 order = 4
 f0 = 3700
 bw = 80
