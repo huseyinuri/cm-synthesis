@@ -30,7 +30,7 @@ S21(w) = P(w) / E(w)e
 order = 4
 f0 = 3700
 bw = 80
-rl = 22
+rl = 20
 omega = np.arange(-4, 4, 0.001)
 ftzs_w = np.array([1.3217, 1.8082])
 
@@ -132,10 +132,10 @@ def plot_S11_S21(f_s, p_s, e_s, e, e_r):
     ax2 = plt.axes([0, 0, 1, 1])
     ip = InsetPosition(ax, [0.72, 0.6, 0.25, 0.25])
     ax2.set_axes_locator(ip)
-    ax2.set_xlim([0.8, 1.1])
-    ax2.set_ylim([-1.6, 0.5])
+    ax2.set_xlim([0.3, 1])
+    ax2.set_ylim([-0.05, 0.01])
     ax2.plot(omega, s21, label='S11')
-    ax2.legend()
+    ax2.set_xticks([])
     mark_inset(ax, ax2, loc1=1, loc2=3, fc='none', ec='0.5')
 
     plt.show()
