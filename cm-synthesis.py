@@ -6,6 +6,8 @@ from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from numpy.polynomial.polynomial import polyadd
 from numpy.polynomial.polynomial import polyfromroots
 from numpy.polynomial.polynomial import polymul
@@ -30,7 +32,7 @@ order = 4
 f0 = 3700
 bw = 80
 rl = 22
-omega = np.arange(-4, 4, 0.0001)
+omega = np.arange(-4, 4, 0.001)
 ftzs_w = np.array([1.3217, 1.8082])
 
 
@@ -120,8 +122,23 @@ def plot_S11_S21(f_s, p_s, e_s, e, e_r):
                         (polyval(omega*1j, e_s) * e)))
 
     _, ax = plt.subplots()
-    ax.plot(omega, s11)
-    ax.plot(omega, s21)
+    ax.plot(omega, s11, c='y', label='S11')
+    ax.plot(omega, s21, label='S21')
+    ax.set_ylim([-50, 1])
+    ax.set_xlabel(r'$\omega$')
+    ax.set_ylabel(r'|S11| and |S21| (dB)')
+    ax.grid(linestyle='--')
+    ax.legend()
+
+    ax2 = plt.axes([0, 0, 1, 1])
+    ip = InsetPosition(ax, [0.72, 0.6, 0.25, 0.25])
+    ax2.set_axes_locator(ip)
+    ax2.set_xlim([0.8, 1.1])
+    ax2.set_ylim([-1.6, 0.5])
+    ax2.plot(omega, s21, label='S11')
+    ax2.legend()
+    mark_inset(ax, ax2, loc1=1, loc2=3, fc='none', ec='0.5')
+
     plt.show()
 
 
@@ -142,7 +159,6 @@ def main():
     print(f'e_r --> {e_r}')
 
     plot_S11_S21(f_s, p_s, e_s, e, e_r)
-    print('hello')
 
 
 if __name__ == '__main__':
