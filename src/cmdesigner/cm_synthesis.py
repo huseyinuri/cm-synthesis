@@ -3,9 +3,15 @@ from __future__ import annotations
 from math import sqrt
 from typing import List
 from typing import Tuple
+import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tabulate import tabulate
+from functools import wraps
+from .colors import FgColors, BgColors
+from collections import defaultdict
+from itertools import zip_longest
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from numpy.polynomial.polynomial import polyadd
@@ -27,25 +33,25 @@ S21: transfer function
 S21(w) = P(w) / E(w)e
 =========================
 """
-order = 4
+#order = 4
 f0 = 3700
 bw = 80
-rl = 20
+#rl = 20
 omega = np.arange(-4, 4, 0.001)
-ftzs_w = np.array([1.3217, 1.8082])
+#ftzs_w = np.array([1.3217, 1.8082])
 
 
-def _populate_tzs_w(order: int,
-                    ftzs_w: List[float] | None = None) -> List[float]:
-    tzs_w = [np.Inf]*order
+def _populate_tzs(order: int,
+                    ftzs: List[float] | None = None):
+    tzs = np.ones(order) * np.Inf
 
-    if ftzs_w is None:
-        return tzs_w
-    if len(ftzs_w) > order:
+    if ftzs is None:
+        return tzs
+    if len(ftzs) > order:
         raise ValueError('Number of finite tz cannot exceed the filter order')
     else:
-        tzs_w[:len(ftzs_w)] = sorted(ftzs_w)
-    return tzs_w
+        tzs[:len(ftzs)] = sorted(ftzs)
+    return tzs
 
 
 def _calc_fbw(f0: int | float, bw: int | float) -> float:
@@ -55,9 +61,9 @@ def _calc_fbw(f0: int | float, bw: int | float) -> float:
         return 0
 
 
-def _calc_eps(order: int, f_s, p_s, rl: float) -> Tuple[float, float]:
+def _calc_eps(order: int, ftzs: List[float],  rl: float, f_s, p_s) -> Tuple[float, float]:
 
-    if len(ftzs_w) < order:
+    if len(ftzs) < order:
         e_r = 1
         e = (1/sqrt(10**(rl/10)-1)) * abs(polyval(1j, p_s) * e_r /
                                           polyval(1j, f_s))
@@ -68,7 +74,7 @@ def _calc_eps(order: int, f_s, p_s, rl: float) -> Tuple[float, float]:
 
 def _calc_Es(e, e_r, f_s, p_s):
     # Alternating singularity method is impelemented
-    # for details please check Cameron's book p.188
+    # For details please check Cameron's book p.188
     e_e_conj = polyadd(e_r * p_s, e * f_s)
     alt_roots = polyroots(e_e_conj)
     alt_roots.real *= np.where(alt_roots.real > 0, -1, 1)
@@ -76,7 +82,7 @@ def _calc_Es(e, e_r, f_s, p_s):
     return e_s
 
 
-def _calc_FsPs(order: int, tzs: List[float]):
+def _calc_FsPs(order: int, ftzs: List[float], tzs: List[float]):
     temp = [1]
     for tz in tzs:
         temp = polymul(temp, [1, -1/tz])
@@ -100,14 +106,14 @@ def _calc_FsPs(order: int, tzs: List[float]):
         f0 = f1
         f1 = fnext
     f_w = f1
-    return _make_monic(f_w, p_w)
+    return _make_monic(order, ftzs, f_w, p_w)
 
 
-def _make_monic(f_w, p_w):
-    # multiplying by 1j maps roots from real frequncy to complex plane
-    # for more details please check Cameron's book p.182
+def _make_monic(order, ftzs, f_w, p_w):
+    # Multiplying by 1j maps roots from real frequncy to complex plane
+    # For more details please check Cameron's book p.182
     f_s = polyfromroots(polyroots(f_w)*1j)
-    if (order - len(ftzs_w)) % 2:
+    if (order - len(ftzs)) % 2:
         p_s = polyfromroots(polyroots(p_w)*1j)
     else:
         p_s = polyfromroots(polyroots(p_w)*1j)*1j
@@ -137,28 +143,70 @@ def plot_S11_S21(f_s, p_s, e_s, e, e_r):
     ax2.plot(omega, s21, label='S11')
     ax2.set_xticks([])
     mark_inset(ax, ax2, loc1=1, loc2=3, fc='none', ec='0.5')
+    plt.savefig('plot.png')
+    #plt.show()
 
-    plt.show()
+
+def _setup_params(params):
+    
+    data_list = {k:v.tolist() if isinstance(v,np.ndarray) else [v] for k,v in params.items()}
+    data_str={}
+    for k,v in data_list.items():
+        v_list=[]
+        for i in v:
+            if isinstance(i, complex) or isinstance(i, float): 
+                v_list.append(f"{i:.4f}")
+            else:
+                v_list.append(f"{i}")
+        data_str[k]=v_list
+    
+    return data_str
 
 
-def main():
+
+def tabulated(fg, bg):
+    def dec(func):
+        table = []
+        headers = ['TZs', 'F(S)', 'P(s)', 'E(s)', 'N', 'RL', 'e', 'e_r']
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            result=_setup_params(result)
+            result = [list(x) for x in list(zip_longest(*result.values(),fillvalue='-'))]
+            print(f'\033[{fg};{bg};1m{tabulate(result,headers=headers,tablefmt="grid")}\033[0m')
+            
+        return wrapper
+    return dec
+
+
+
+@tabulated(FgColors.BLACK,BgColors.YELLOW)
+def cli(args: argparse.Namespace):
     fbw = _calc_fbw(f0, bw)
-    tzs_w = _populate_tzs_w(order, ftzs_w)
-    f_s, p_s = _calc_FsPs(order, tzs_w)
-    e, e_r = _calc_eps(order, f_s, p_s, rl)
+    tzs = _populate_tzs(args.order, args.zeros)
+    f_s, p_s = _calc_FsPs(args.order, args.zeros, tzs)
+    e, e_r = _calc_eps(args.order, args.zeros, args.return_loss, f_s, p_s)
     e_s = _calc_Es(e, e_r, f_s, p_s)
 
-    print(f'Order --> {order}')
+    plot_S11_S21(f_s, p_s, e_s, e, e_r)
+
+    params = {'tzs':tzs,'fs':f_s, 'ps':p_s, 'es':e_s,
+             'n':args.order, 'rl':args.return_loss, 'e':e, 'er':e_r}
+
+    return params
+
+    """    print(f'Order --> {args.order}')
     print(f'Fractional bandwidth --> {fbw}')
-    print(f'TZs in real frequency --> {tzs_w}')
+    print(f'TZs in real frequency --> {tzs}')
     print(f'Monic F(s) --> {f_s}')
     print(f'Monic P(s) --> {p_s}')
     print(f'Monic E(s) --> {e_s}')
     print(f'e --> {e}')
     print(f'e_r --> {e_r}')
 
-    plot_S11_S21(f_s, p_s, e_s, e, e_r)
+    
+    """
 
 
 if __name__ == '__main__':
-    main()
+    cli()
