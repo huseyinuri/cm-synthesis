@@ -6,5 +6,10 @@ design by coupling matrix approach.
 
 # Installation
 ```bash
-pip install cm-synthesis
+pip install cmdesigner
 ```
+# Usage
+```bash
+cmdesigner-poly -h
+```
+
