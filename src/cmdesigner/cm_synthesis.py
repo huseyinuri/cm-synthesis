@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from math import sqrt
+import math
 from typing import List
 from typing import Tuple
 import argparse
@@ -38,29 +39,33 @@ f0 = 3700
 bw = 80
 omega = np.arange(-4, 4, 0.001)
 
-def _populate_tzs(order: int,
-                    ftzs: List[float] | None = None):
-    tzs = np.ones(order) * np.Inf
+_len = lambda x : 0 if x is None else len(x)
 
+def _populate_tzs(order,
+                    ftzs = None):
+    
+    tzs = [np.Inf] * order
     if ftzs is None:
         return tzs
-    if len(ftzs) > order:
-        raise ValueError('Number of finite tz cannot exceed the filter order')
+    ftzs[:] = [x / 1j for x in ftzs]
+    if len(ftzs) > order-1:
+        raise ValueError('Number of finite tz cannot exceed the filter order-1')
     else:
-        tzs[:len(ftzs)] = sorted(ftzs)
+        tzs[:len(ftzs)] = ftzs
     return tzs
 
 
-def _calc_fbw(f0: int | float, bw: int | float) -> float:
+def _calc_fbw(f0, bw):
+    
     try:
         return bw/f0
     except ZeroDivisionError:
         return 0
 
 
-def _calc_eps(order: int, ftzs: List[float],  rl: float, f_s, p_s) -> Tuple[float, float]:
+def _calc_eps(order, ftzs,  rl, f_s, p_s):
 
-    if len(ftzs) < order:
+    if _len(ftzs) < order:
         e_r = 1
         e = (1/sqrt(10**(rl/10)-1)) * abs(polyval(1j, p_s) * e_r /
                                           polyval(1j, f_s))
@@ -79,7 +84,8 @@ def _calc_Es(e, e_r, f_s, p_s):
     return e_s
 
 
-def _calc_FsPs(order: int, ftzs: List[float], tzs: List[float]):
+def _calc_FsPs(order, ftzs, tzs):
+    
     temp = [1]
     for tz in tzs:
         temp = polymul(temp, [1, -1/tz])
@@ -107,10 +113,12 @@ def _calc_FsPs(order: int, ftzs: List[float], tzs: List[float]):
 
 
 def _make_monic(order, ftzs, f_w, p_w):
+    
     # Multiplying by 1j maps roots from real frequncy to complex plane
     # For more details please check Cameron's book p.182
     f_s = polyfromroots(polyroots(f_w)*1j)
-    if (order - len(ftzs)) % 2:
+    print(ftzs)
+    if (order - _len(ftzs)) % 2:
         p_s = polyfromroots(polyroots(p_w)*1j)
     else:
         p_s = polyfromroots(polyroots(p_w)*1j)*1j
@@ -118,6 +126,7 @@ def _make_monic(order, ftzs, f_w, p_w):
 
 
 def plot_S11_S21(f_s, p_s, e_s, e, e_r):
+    
     s11 = 20 * np.log10(abs(polyval(omega*1j, f_s) /
                         (polyval(omega*1j, e_s) * e_r)))
     s21 = 20 * np.log10(abs(polyval(omega*1j, p_s) /
@@ -145,7 +154,11 @@ def plot_S11_S21(f_s, p_s, e_s, e, e_r):
 
 
 def _setup_params(params):
+
     data_list = {k:v.tolist() if isinstance(v,np.ndarray) else [v] for k,v in params.items()}
+    # this monoid get rid of extra list wrapping the list
+    data_list['tzs'] = sum(data_list['tzs'],[])
+    print(f'{data_list}')
     data_str={}
     for k,v in data_list.items():
         v_list=[]
@@ -155,7 +168,6 @@ def _setup_params(params):
             else:
                 v_list.append(f"{i}")
         data_str[k]=v_list
-    
     return data_str
 
 
@@ -163,7 +175,7 @@ def _setup_params(params):
 def tabulated(fg, bg):
     def dec(func):
         table = []
-        headers = ['TZs', 'F(S)', 'P(s)', 'E(s)', 'N', 'RL', 'e', 'e_r']
+        headers = ['TZs(w)', 'F(S)', 'P(s)', 'E(s)', 'N', 'RL', 'e', 'e_r']
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
@@ -176,13 +188,17 @@ def tabulated(fg, bg):
 
 
 
-@tabulated(FgColors.BLACK,BgColors.YELLOW)
+@tabulated(FgColors.WHITE,BgColors.BLACK)
 def cli(args: argparse.Namespace):
     fbw = _calc_fbw(f0, bw)
     tzs = _populate_tzs(args.order, args.zeros)
     f_s, p_s = _calc_FsPs(args.order, args.zeros, tzs)
     e, e_r = _calc_eps(args.order, args.zeros, args.return_loss, f_s, p_s)
     e_s = _calc_Es(e, e_r, f_s, p_s)
+    print(type(f_s))
+    print(type(p_s))
+    print(type(e_s))
+    
     plot_S11_S21(f_s, p_s, e_s, e, e_r)
 
     params = {'tzs':tzs,'fs':f_s, 'ps':p_s, 'es':e_s,
