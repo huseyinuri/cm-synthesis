@@ -33,13 +33,10 @@ S21: transfer function
 S21(w) = P(w) / E(w)e
 =========================
 """
-#order = 4
+
 f0 = 3700
 bw = 80
-#rl = 20
 omega = np.arange(-4, 4, 0.001)
-#ftzs_w = np.array([1.3217, 1.8082])
-
 
 def _populate_tzs(order: int,
                     ftzs: List[float] | None = None):
@@ -144,11 +141,10 @@ def plot_S11_S21(f_s, p_s, e_s, e, e_r):
     ax2.set_xticks([])
     mark_inset(ax, ax2, loc1=1, loc2=3, fc='none', ec='0.5')
     plt.savefig('plot.png')
-    #plt.show()
+
 
 
 def _setup_params(params):
-    
     data_list = {k:v.tolist() if isinstance(v,np.ndarray) else [v] for k,v in params.items()}
     data_str={}
     for k,v in data_list.items():
@@ -187,7 +183,6 @@ def cli(args: argparse.Namespace):
     f_s, p_s = _calc_FsPs(args.order, args.zeros, tzs)
     e, e_r = _calc_eps(args.order, args.zeros, args.return_loss, f_s, p_s)
     e_s = _calc_Es(e, e_r, f_s, p_s)
-
     plot_S11_S21(f_s, p_s, e_s, e, e_r)
 
     params = {'tzs':tzs,'fs':f_s, 'ps':p_s, 'es':e_s,
@@ -195,17 +190,6 @@ def cli(args: argparse.Namespace):
 
     return params
 
-    """    print(f'Order --> {args.order}')
-    print(f'Fractional bandwidth --> {fbw}')
-    print(f'TZs in real frequency --> {tzs}')
-    print(f'Monic F(s) --> {f_s}')
-    print(f'Monic P(s) --> {p_s}')
-    print(f'Monic E(s) --> {e_s}')
-    print(f'e --> {e}')
-    print(f'e_r --> {e_r}')
-
-    
-    """
 
 
 if __name__ == '__main__':
