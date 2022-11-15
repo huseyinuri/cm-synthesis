@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tabulate import tabulate
 from functools import wraps
-from .colors import FgColors, BgColors
+#from .colors import FgColors, BgColors
 from collections import defaultdict
 from itertools import zip_longest
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
@@ -189,7 +189,7 @@ def tabulated(fg, bg):
 
 
 
-@tabulated(FgColors.WHITE,BgColors.BLACK)
+#@tabulated(FgColors.WHITE,BgColors.BLACK)
 def cli(args: argparse.Namespace):
     
     fbw = _calc_fbw(f0, bw)
@@ -208,4 +208,7 @@ def cli(args: argparse.Namespace):
 
 
 if __name__ == '__main__':
-    cli()
+    #cli()
+    tzs = _populate_tzs(4,[1.3217j,1.8082j])
+    _, p = _calc_FsPs(4,[1.3217j,1.8082j],tzs)
+    print('hello')
