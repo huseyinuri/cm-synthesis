@@ -38,7 +38,7 @@ class CharPoly:
             if not all(isinstance(value, complex) for value in values):
                 raise TypeError('All finite transmission zeros must be given as complex')
             if len(values) > self.order - 1:
-                    raise ValueError('Number of prescribed transmission zeros cannot exceed the order')
+                raise ValueError('Number of prescribed transmission zeros cannot exceed the order')
             self._transmission_zeros = sorted(values, key=abs) + [np.Inf] * (self.order - len(values))
     
     @property
