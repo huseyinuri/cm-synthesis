@@ -4,6 +4,7 @@ import numpy.polynomial.polynomial as P
 from functools import reduce
 from functools import cache,wraps
 from tabulate import tabulate
+from cmdesigner.utils import splot 
 
 from itertools import zip_longest
 
@@ -158,11 +159,11 @@ class CharPoly:
         roots = P.polyroots(F_1)
         return roots, F_1
   
-        
 
 if __name__ == '__main__':
-
     c=CharPoly(7,23,[0.9218-0.1546j, -0.9218-0.1546j, 1.2576j])
-    print(c)          
+    print(c)
+    x_lims = np.arange(-4, 4, 0.001)
+    splot(c,x_lims=x_lims)         
 
     
