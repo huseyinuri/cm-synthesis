@@ -1,7 +1,7 @@
 import sys
 import argparse
 from typing import List
-from cmdesigner.polysynthesis import cli
+from cmdesigner.poly import cli
 
 def main(argv: List[str] | None = None) -> int:
     if argv is None:
@@ -32,13 +32,13 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument('@r',
                         '@@return-loss',
                         action='store',
-                        default=20,
+                        default=22,
                         type=float,
                         help='Desired in-band return loss level. default:20'
                     )
     args = parser.parse_args(argv)
     
-    print('\n')
+
     cli(args)
 
 if __name__ == '__main__':

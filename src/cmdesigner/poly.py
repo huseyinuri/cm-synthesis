@@ -59,7 +59,7 @@ class CharPoly:
 
         for row in zip_longest(indices,_f_s_roots,_f_s,_p_s_roots,_p_s,_e_s_roots,_e_s,_e_r,_e,fillvalue='-'):
             data.append(list(row))
-        return tabulate(data,headers='firstrow')
+        return tabulate(data, headers = 'firstrow', tablefmt = 'outline')
     
     @property
     def transmission_zeros(self):
@@ -159,11 +159,18 @@ class CharPoly:
         roots = P.polyroots(F_1)
         return roots, F_1
   
+def cli(args):
+    c=CharPoly(args.order, args.return_loss, args.zeros)
+    print(c)
+    x_lims = np.arange(-4, 4, 0.001)
+    splot(c,x_lims=x_lims)         
 
+"""
 if __name__ == '__main__':
     c=CharPoly(7,23,[0.9218-0.1546j, -0.9218-0.1546j, 1.2576j])
     print(c)
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
+"""
 
     
