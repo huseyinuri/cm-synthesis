@@ -30,7 +30,6 @@ def monic(func):
         return roots.tolist(), coeffs.tolist()
     return wrapper
 
-
 class CharPoly:
     def __init__(self, order, return_loss,  finite_tzs = None) -> None:
         self.order = order
@@ -45,17 +44,17 @@ class CharPoly:
 
         indices = [str(i) for i in range(self.order + 1)]
         f_s_roots, f_s = self.s11_num
-        _f_s_roots = [f"{i:.3f}" for i in f_s_roots]
-        _f_s = [f"{i:.3f}" for i in f_s]
+        _f_s_roots = [f"{i:.4f}" for i in f_s_roots]
+        _f_s = [f"{i:.4f}" for i in f_s]
         p_s_roots, p_s = self.s21_num
-        _p_s_roots = [f"{i:.3f}" for i in p_s_roots]
-        _p_s = [f"{i:.3f}" for i in p_s]
+        _p_s_roots = [f"{i:.4f}" for i in p_s_roots]
+        _p_s = [f"{i:.4f}" for i in p_s]
         e_s_roots, e_s = self.denum
-        _e_s_roots = [f"{i:.3f}" for i in e_s_roots]
-        _e_s = [f"{i:.3f}" for i in e_s]
+        _e_s_roots = [f"{i:.4f}" for i in e_s_roots]
+        _e_s = [f"{i:.4f}" for i in e_s]
         e_r, e = self.ripple_factors
-        _e_r = [f"{e_r:.3f}"]
-        _e = [f"{e:.3f}"]
+        _e_r = [f"{e_r:.6f}"]
+        _e = [f"{e:.6f}"]
 
         for row in zip_longest(indices,_f_s_roots,_f_s,_p_s_roots,_p_s,_e_s_roots,_e_s,_e_r,_e,fillvalue='-'):
             data.append(list(row))
@@ -72,7 +71,7 @@ class CharPoly:
         else:
             if not all(isinstance(value, complex) for value in values):
                 raise TypeError('All finite transmission zeros must be given as complex')
-            if len(values) > self.order - 1:
+            if len(values) > self.order:
                 raise ValueError('Number of prescribed zeros cannot exceed the order')
             self._transmission_zeros = sorted(values, key=abs) + [np.Inf] * (self.order - len(values))
     
@@ -125,8 +124,11 @@ class CharPoly:
             e = (1/math.sqrt(10**(self.return_loss/10)-1)) * abs(P.polyval(1j, P_s) * e_r /
                                           P.polyval(1j, F_s))
             return e_r, e
-        elif self.finite_tz_len == self.order:
-            raise NotImplementedError('Canonical case')
+        elif self.finite_tzs_len == self.order:
+            e = (1/math.sqrt(10**(self.return_loss/10)-1)) * abs(P.polyval(1j, P_s)  /
+                                          P.polyval(1j, F_s))
+            e_r = e / math.sqrt((e**2)-1)
+            return e_r, e
         else:
             raise ValueError('Number of prescribed zero cannot exceed the filter order')
 
@@ -158,10 +160,57 @@ class CharPoly:
             F_1 = Fnext
         roots = P.polyroots(F_1)
         return roots, F_1
-  
+
+class AdmitPoly:
+    def __init__(self,char_poly):
+        self.char_poly = char_poly
+        if self.char_poly.finite_tzs_len == self.char_poly.order:
+            self.K0 = self._compute_K0
+        else:
+            self.K0 = 0
+
+    def _compute_K0(self):
+        pass
+
+    def _compute_m_n(self):
+        e_r, e = self.char_poly.ripple_factors
+        _, f_coeffs = self.char_poly.s11_num
+        f_coeffs /= e_r
+        _, e_coeffs = self.char_poly.denum
+        temp = np.add(f_coeffs, e_coeffs)
+        temp /= temp[-1].real # normalize all coeffs to highest power
+        m_coeffs = np.zeros(temp.shape[0], dtype=temp.dtype)
+        n_coeffs = np.zeros(temp.shape[0], dtype=temp.dtype)
+        m_coeffs[::2] = temp[::2].real
+        m_coeffs[1::2] = (temp[1::2].imag)*1j
+        n_coeffs[::2] = (temp[::2].imag)*1j
+        n_coeffs[1::2] = temp[1::2].real
+
+        return m_coeffs,n_coeffs
+    @property
+    def y22_num(self):
+        m_coeffs, n_coeffs = self._compute_m_n()
+        if self.char_poly.order % 2 :
+            pass
+    @property
+    def y21_num(self):
+        pass
+    @property
+    def denum(self):
+        if self.char_poly.order % 2 : # N is odd
+            _, coeffs = self._compute_m_n()
+        else:
+            coeffs, _ = self._compute_m_n()
+        roots = P.polyroots(coeffs)
+        return roots,coeffs
+        
+
 def cli(args):
     c=CharPoly(args.order, args.return_loss, args.zeros)
     print(c)
+    a=AdmitPoly(c)
+    print(a.denum)
+
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
 
