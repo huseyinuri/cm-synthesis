@@ -179,37 +179,44 @@ class AdmitPoly:
         _, e_coeffs = self.char_poly.denum
         temp = np.add(f_coeffs, e_coeffs)
         temp /= temp[-1].real # normalize all coeffs to highest power
-        m_coeffs = np.zeros(temp.shape[0], dtype=temp.dtype)
-        n_coeffs = np.zeros(temp.shape[0], dtype=temp.dtype)
+        m_coeffs = np.zeros(temp.shape[0], dtype=np.complex128)
+        n_coeffs = np.zeros(temp.shape[0], dtype=np.complex128)
+
         m_coeffs[::2] = temp[::2].real
         m_coeffs[1::2] = (temp[1::2].imag)*1j
+
         n_coeffs[::2] = (temp[::2].imag)*1j
         n_coeffs[1::2] = temp[1::2].real
 
         return m_coeffs,n_coeffs
+
     @property
     def y22_num(self):
         m_coeffs, n_coeffs = self._compute_m_n()
         if self.char_poly.order % 2 :
-            pass
+            return m_coeffs
+        else:
+            return n_coeffs
+            
     @property
     def y21_num(self):
         pass
     @property
     def denum(self):
-        if self.char_poly.order % 2 : # N is odd
-            _, coeffs = self._compute_m_n()
+        if self.char_poly.order % 2 : 
+            _, coeffs = self._compute_m_n()    # denum is "n" if N is odd
         else:
-            coeffs, _ = self._compute_m_n()
-        roots = P.polyroots(coeffs)
-        return roots,coeffs
+            coeffs, _ = self._compute_m_n()    # denum is "m" if N is even
+        
+        return coeffs
         
 
 def cli(args):
     c=CharPoly(args.order, args.return_loss, args.zeros)
-    print(c)
+    #print(c)
     a=AdmitPoly(c)
-    print(a.denum)
+    #a.denum
+    print(a.y22_num)
 
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
