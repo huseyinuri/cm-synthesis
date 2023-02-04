@@ -165,12 +165,13 @@ class AdmitPoly:
     def __init__(self,char_poly):
         self.char_poly = char_poly
         if self.char_poly.finite_tzs_len == self.char_poly.order:
-            self.K0 = self._compute_K0
+            self.Kinf = self._compute_Kinf()
         else:
-            self.K0 = 0
+            self.Kinf = 0
 
-    def _compute_K0(self):
-        pass
+    def _compute_Kinf(self):
+        e_r, e = self.char_poly.ripple_factors
+        return (e / e_r) * (e_r - 1)
 
     def _compute_m_n(self):
         e_r, e = self.char_poly.ripple_factors
@@ -178,7 +179,7 @@ class AdmitPoly:
         f_coeffs /= e_r
         _, e_coeffs = self.char_poly.denum
         temp = np.add(f_coeffs, e_coeffs)
-        temp /= temp[-1].real # normalize all coeffs to highest power
+        
         m_coeffs = np.zeros(temp.shape[0], dtype=np.complex128)
         n_coeffs = np.zeros(temp.shape[0], dtype=np.complex128)
 
@@ -190,33 +191,51 @@ class AdmitPoly:
 
         return m_coeffs,n_coeffs
 
-    @property
-    def y22_num(self):
-        m_coeffs, n_coeffs = self._compute_m_n()
-        if self.char_poly.order % 2 :
-            return m_coeffs
-        else:
-            return n_coeffs
-            
-    @property
-    def y21_num(self):
-        pass
+
     @property
     def denum(self):
         if self.char_poly.order % 2 : 
             _, coeffs = self._compute_m_n()    # denum is "n" if N is odd
+            
         else:
-            coeffs, _ = self._compute_m_n()    # denum is "m" if N is even
-        
-        return coeffs
-        
+            coeffs, _= self._compute_m_n()    # denum is "m" if N is even
+            
+        return coeffs/coeffs[-1].real
+
+    @property
+    def y22_num(self):
+        m_coeffs, n_coeffs = self._compute_m_n()
+        if self.char_poly.order % 2 :
+            return m_coeffs/n_coeffs[-1].real
+        else:
+            return n_coeffs/m_coeffs[-1].real
+            
+    @property
+    def y21_num(self):
+        m_coeffs, n_coeffs = self._compute_m_n()
+        kinf = self.Kinf
+        denum = self.denum
+        _, e = self.char_poly.ripple_factors
+        _, P_s = self.char_poly.s21_num
+        if self.char_poly.order % 2 :
+            temp = (P_s/e)/(n_coeffs[-1].real)
+        else:
+            temp = (P_s/e)/(m_coeffs[-1].real)
+        print("temp")
+        print(temp)
+        return temp - 1j*kinf*denum
+
 
 def cli(args):
     c=CharPoly(args.order, args.return_loss, args.zeros)
-    #print(c)
+    print(c)
     a=AdmitPoly(c)
-    #a.denum
+    print("denum")
+    print(a.denum)
+    print("y22 num")
     print(a.y22_num)
+    print("y21 num")
+    print(a.y21_num)
 
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
