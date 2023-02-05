@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import numpy.polynomial.polynomial as P
+from scipy.signal import residue
 from functools import reduce
 from functools import cache,wraps
 from tabulate import tabulate
@@ -169,6 +170,31 @@ class AdmitPoly:
         else:
             self.Kinf = 0
 
+    def __str__(self) -> str:
+        data = []
+        headers = ['i', 'yd(s)', 'y22n(s)', 'y21n(s)', 'y21n(s) w/o M_sl.' ,'M_sl']
+        data.append(headers)
+
+        indices = [str(i) for i in range(self.char_poly.order + 1)]
+        denum = self.denum
+        _denum = [f"{i:.4f}" for i in denum]
+        
+        y22n = self.y22_num
+        _y22n = [f"{i:.4f}" for i in y22n]
+
+        y21n = self.y21_num
+        _y21n = [f"{i:.4f}" for i in y21n]
+
+        y21n_msl = self.y21_num_msl
+        _y21n_msl = [f"{i:.4f}" for i in y21n_msl]
+
+        kinf = self.Kinf
+        _kinf = [f"{kinf:.4f}"]
+
+        for row in zip_longest(indices,_denum,_y22n,_y21n,_y21n_msl,_kinf,fillvalue='-'):
+            data.append(list(row))
+        return tabulate(data, headers = 'firstrow', tablefmt = 'outline')
+
     def _compute_Kinf(self):
         e_r, e = self.char_poly.ripple_factors
         return (e / e_r) * (e_r - 1)
@@ -206,9 +232,9 @@ class AdmitPoly:
     def y22_num(self):
         m_coeffs, n_coeffs = self._compute_m_n()
         if self.char_poly.order % 2 :
-            return m_coeffs/n_coeffs[-1].real
+            return P.polydiv(m_coeffs,[n_coeffs[-1].real])[0]
         else:
-            return n_coeffs/m_coeffs[-1].real
+            return P.polydiv(n_coeffs,[m_coeffs[-1].real])[0]
             
     @property
     def y21_num(self):
@@ -218,25 +244,43 @@ class AdmitPoly:
         _, e = self.char_poly.ripple_factors
         _, P_s = self.char_poly.s21_num
         if self.char_poly.order % 2 :
-            temp = (P_s/e)/(n_coeffs[-1].real)
+            return (P_s/e)/(n_coeffs[-1].real)
         else:
-            temp = (P_s/e)/(m_coeffs[-1].real)
-        print("temp")
-        print(temp)
-        return temp - 1j*kinf*denum
+            return (P_s/e)/(m_coeffs[-1].real)
+        
+    @property
+    def foo(self):
+        y21_num = self.y21_num_msl
+        denum = self.denum
+        r21,_lambda,k = residue(y21_num[::-1],denum[::-1])
+        
+        print("lambdas")
+        print(_lambda.imag)
+
+        print("residues")
+        print(r21.real)
+
+    @property
+    def y21_num_msl(self):
+        # this routine reduces degree of y21_num 
+        # polynomial by 1 by extracting Msl for
+        # fully canonical case
+
+        temp = self.y21_num - 1j*(self.Kinf)*(self.denum)
+        if abs(temp[-1]) < 1e-10:
+            y21_msl = temp[:-1]
+        else:
+            y21_msl = temp 
+        return y21_msl
+        
 
 
 def cli(args):
     c=CharPoly(args.order, args.return_loss, args.zeros)
     print(c)
     a=AdmitPoly(c)
-    print("denum")
-    print(a.denum)
-    print("y22 num")
-    print(a.y22_num)
-    print("y21 num")
-    print(a.y21_num)
-
+    print(a)
+    a.foo
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
 
