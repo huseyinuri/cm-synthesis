@@ -167,8 +167,10 @@ class AdmitPoly:
         self.char_poly = char_poly
         if self.char_poly.finite_tzs_len == self.char_poly.order:
             self.Kinf = self._compute_Kinf()
+            self.fully_canonical = True
         else:
             self.Kinf = 0
+            self.fully_canonical = False
 
     def __str__(self) -> str:
         data = []
@@ -247,18 +249,7 @@ class AdmitPoly:
             return (P_s/e)/(n_coeffs[-1].real)
         else:
             return (P_s/e)/(m_coeffs[-1].real)
-        
-    @property
-    def foo(self):
-        y21_num = self.y21_num_msl
-        denum = self.denum
-        r21,_lambda,k = residue(y21_num[::-1],denum[::-1])
-        
-        print("lambdas")
-        print(_lambda.imag)
 
-        print("residues")
-        print(r21.real)
 
     @property
     def y21_num_msl(self):
@@ -273,6 +264,32 @@ class AdmitPoly:
             y21_msl = temp 
         return y21_msl
         
+
+    @property
+    def foo(self):
+        denum = self.denum
+        y22_num = self.y22_num
+        if self.fully_canonical:
+            y21_num = self.y21_num_msl
+        else:
+            y21_num = self.y21_num
+        
+        r21,_lambda,k = residue(y21_num[::-1],denum[::-1])
+        r22,_,_ = residue(y22_num[::-1],denum[::-1])
+
+        _lambda_imag = _lambda.imag
+
+        _lambda_sort_indices = sorted(range(len(_lambda_imag)), key=lambda k: _lambda_imag[k])
+        print("lambdas")
+        print(_lambda_imag)
+        r21_real = r21.real[_lambda_sort_indices]
+        r22_real = r22.real[_lambda_sort_indices]
+        print("r21 residues")
+        print(r21_real)
+        print("r22 residues")
+        print(r22_real)
+        
+
 
 
 def cli(args):
