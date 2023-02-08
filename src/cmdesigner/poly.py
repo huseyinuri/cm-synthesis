@@ -266,7 +266,7 @@ class AdmitPoly:
         
 
     @property
-    def foo(self):
+    def transversal_couplings(self):
         denum = self.denum
         y22_num = self.y22_num
         if self.fully_canonical:
@@ -280,14 +280,29 @@ class AdmitPoly:
         _lambda_imag = _lambda.imag
 
         _lambda_sort_indices = sorted(range(len(_lambda_imag)), key=lambda k: _lambda_imag[k])
-        print("lambdas")
-        print(_lambda_imag)
+
         r21_real = r21.real[_lambda_sort_indices]
         r22_real = r22.real[_lambda_sort_indices]
-        print("r21 residues")
-        print(r21_real)
-        print("r22 residues")
-        print(r22_real)
+        first_row_column = r21_real/np.sqrt(r22_real)
+        last_row_column = np.sqrt(r22_real)
+        diagonals = -1*_lambda_imag[_lambda_sort_indices]
+        print("")
+        print("+++++++++++++++++")
+        print("")
+        print("--++-- k_1i - k_i1 --++--")
+        print(first_row_column)
+        print("")
+        print("--++-- k_Ni - k_iN --++--")
+        print(last_row_column)
+        print("")
+        print("--++-- k_ii --++--")
+        print(diagonals)
+        print("")
+        
+        print("--++-- k_sl --++--")
+        print(self.Kinf)
+        print("")
+        print("+++++++++++++++++")
         
 
 
@@ -297,7 +312,7 @@ def cli(args):
     print(c)
     a=AdmitPoly(c)
     print(a)
-    a.foo
+    a.transversal_couplings
     x_lims = np.arange(-4, 4, 0.001)
     splot(c,x_lims=x_lims)         
 
